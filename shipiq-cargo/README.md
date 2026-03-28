@@ -17,14 +17,22 @@ We sort cargos descending by volume and tanks descending by capacity, then greed
 
 **Why this isn't NP-hard:** Classic bin-packing is NP-hard because items cannot be split — you must decide which bin each whole item goes into. Allowing splits removes that combinatorial constraint entirely, making a simple greedy pass optimal in O(n log n) time (dominated by sorting).
 
+**Alternatives considered:**
+- **Linear Programming (LP):** An LP solver (e.g. PuLP, scipy.optimize) could model this as a maximization problem with capacity constraints. It would produce the same optimal result, but adds solver dependencies and complexity that aren't justified here — the greedy approach already guarantees optimality when splitting is allowed.
+- **Dynamic Programming (DP):** DP is useful for subset-sum or 0/1 knapsack variants where items cannot be split. Since splitting is allowed here, DP would be over-engineering the solution.
+
 ### Trade-offs
-- **Greedy vs. LP solver:** A linear programming solver would give the same optimal result here but adds dependency complexity. Greedy is simpler, faster, and equally optimal for this constraint set.
+- **Greedy is O(n log n) and optimal** for this problem because splitting is allowed — every unit of cargo is fungible, so we simply pour until tanks are full or cargo runs out. The sorting step dominates runtime.
+- **If splitting were disallowed**, the problem becomes NP-hard (bin packing). A branch-and-bound algorithm or LP/ILP solver would be needed to find optimal solutions, with heuristics for large inputs.
 - **In-memory state:** No database — state lives in a module-level dict. Fine for a single-instance service; would need a shared store (Redis, DB) for multi-instance deployments.
 - **One cargo per tank:** The constraint that each tank holds only one cargo ID means some tank capacity may go unused even if other cargos could fill it.
 
 ### Assumptions
-- Cargo and tank IDs are unique within each input
-- Volumes and capacities are positive numbers
+- **No persistent database needed** — in-memory state is sufficient for this scope (single process, no multi-user concurrency)
+- **No authentication required** — the service is scoped as an internal optimization tool, not a public-facing API
+- Cargo volumes and tank capacities are **positive numbers**
+- Cargo and tank IDs are **unique** within each input
+- Input is **trusted and validated via Pydantic** — malformed requests are rejected automatically with descriptive errors
 - Input data is replaced entirely on each POST /input call
 
 ## API Endpoints
